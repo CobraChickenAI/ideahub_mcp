@@ -1,8 +1,8 @@
-"""CLI entry point."""
+from ideahub_mcp.server import build_server
 
 
 def main() -> None:
-    raise SystemExit("not wired yet — see Task 22")
+    build_server().run()
 
 
 if __name__ == "__main__":
