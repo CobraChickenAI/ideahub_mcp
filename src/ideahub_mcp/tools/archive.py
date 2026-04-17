@@ -52,7 +52,8 @@ def archive_idea(conn: sqlite3.Connection, input_: ArchiveInput) -> ArchiveOutpu
             "UPDATE idea SET archived_at = ? WHERE id = ?", (now, input_.id)
         )
         conn.execute(
-            "INSERT INTO idea_note (id, idea_id, kind, content, actor_id, originator_id, created_at) "
+            "INSERT INTO idea_note "
+            "(id, idea_id, kind, content, actor_id, originator_id, created_at) "
             "VALUES (?, ?, 'archive', ?, ?, ?, ?)",
             (note_id, input_.id, input_.reason, input_.actor, input_.originator, now),
         )

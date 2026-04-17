@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import shutil
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 
@@ -25,7 +25,7 @@ def snapshot_store(
 ) -> Path:
     """Copy store_path into backups_dir with an ISO timestamp. Prune older than retention."""
     backups_dir.mkdir(parents=True, exist_ok=True)
-    now_iso = now_override or datetime.now(timezone.utc).replace(tzinfo=None).isoformat(
+    now_iso = now_override or datetime.now(UTC).replace(tzinfo=None).isoformat(
         timespec="seconds"
     )
     safe = now_iso.replace(":", "-")

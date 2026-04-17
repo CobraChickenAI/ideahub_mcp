@@ -33,7 +33,8 @@ def annotate_idea(conn: sqlite3.Connection, input_: AnnotateInput) -> AnnotateOu
     note_id = new_ulid()
     now = utcnow_iso()
     conn.execute(
-        "INSERT INTO idea_note (id, idea_id, kind, content, actor_id, originator_id, created_at) "
+        "INSERT INTO idea_note "
+        "(id, idea_id, kind, content, actor_id, originator_id, created_at) "
         "VALUES (?, ?, NULL, ?, ?, ?, ?)",
         (note_id, input_.id, input_.content, input_.actor, input_.originator, now),
     )

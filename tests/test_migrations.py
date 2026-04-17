@@ -5,7 +5,6 @@ from pathlib import Path
 from ideahub_mcp.storage.connection import open_connection
 from ideahub_mcp.storage.migrations import apply_pending_migrations
 
-
 MIGRATIONS_DIR = (
     Path(__file__).resolve().parents[1] / "src" / "ideahub_mcp" / "storage" / "migrations"
 )

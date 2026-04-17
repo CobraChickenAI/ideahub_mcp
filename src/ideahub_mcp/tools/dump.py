@@ -63,7 +63,7 @@ def dump_ideas(conn: sqlite3.Connection, input_: DumpInput) -> DumpOutput:
     truncated = False
     accumulated = 0
     for r in rows:
-        idea_id, content, scope, actor, originator, tags_json, created_at = r
+        idea_id, content, _scope, actor, originator, tags_json, created_at = r
         header = f"## [{idea_id}] {created_at} • {actor}"
         if originator:
             header += f" via {originator}"

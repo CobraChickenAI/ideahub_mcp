@@ -1,8 +1,8 @@
 import sqlite3
 
 from ideahub_mcp.domain.actors import resolve_actor
-from ideahub_mcp.tools.dump import DUMP_HINT, DumpInput, dump_ideas
 from ideahub_mcp.tools.capture import CaptureInput, capture_idea
+from ideahub_mcp.tools.dump import DUMP_HINT, DumpInput, dump_ideas
 
 
 def _seed(conn: sqlite3.Connection) -> None:

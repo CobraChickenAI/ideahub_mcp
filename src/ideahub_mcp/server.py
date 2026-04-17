@@ -144,7 +144,8 @@ def build_server() -> FastMCP:
     @mcp.tool(
         description=(
             "List ideas with filters (scope, actor, originator, tags_any, tags_all, since, until). "
-            "Returns id, scope, actor, preview (120 chars), and created_at. Archived excluded by default."
+            "Returns id, scope, actor, preview (120 chars), and created_at. "
+            "Archived excluded by default."
         )
     )
     def list(  # noqa: A001
