@@ -15,6 +15,7 @@ class CaptureInput(BaseModel):
     actor: str
     originator: str | None = None
     tags: list[str] = Field(default_factory=list)
+    actor_created: bool = False
 
 
 class CaptureOutput(BaseModel):
@@ -58,6 +59,7 @@ def capture_idea(conn: sqlite3.Connection, input_: CaptureInput) -> CaptureOutpu
             originator=input_.originator,
             created_at=dup[1],
             suggested_tags=_suggest_tags(conn, input_.content),
+            actor_created=input_.actor_created,
         )
 
     new_id = new_ulid()
@@ -82,4 +84,5 @@ def capture_idea(conn: sqlite3.Connection, input_: CaptureInput) -> CaptureOutpu
         originator=input_.originator,
         created_at=now,
         suggested_tags=_suggest_tags(conn, input_.content),
+        actor_created=input_.actor_created,
     )

@@ -14,6 +14,12 @@ def test_dump_empty_has_hint(conn: sqlite3.Connection) -> None:
     assert out.count == 0
     assert out.blob == ""
     assert out.hint == DUMP_HINT
+    assert out.scope_resolved == "global"
+
+
+def test_dump_echoes_resolved_scope(conn: sqlite3.Connection) -> None:
+    out = dump_ideas(conn, DumpInput(scope="repo:demo"))
+    assert out.scope_resolved == "repo:demo"
 
 
 def test_dump_newest_first(conn: sqlite3.Connection) -> None:

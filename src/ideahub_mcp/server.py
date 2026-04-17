@@ -4,7 +4,7 @@ import os
 import sqlite3
 from pathlib import Path
 
-from fastmcp import FastMCP
+from fastmcp import Context, FastMCP
 
 from ideahub_mcp.domain.actors import resolve_actor
 from ideahub_mcp.domain.scopes import resolve_scope
@@ -52,13 +52,25 @@ def build_server() -> FastMCP:
 
     mcp = FastMCP("ideahub-mcp")
 
-    def _resolve(actor: str | None, scope: str | None) -> tuple[sqlite3.Connection, str, str]:
+    def _client_info_name(ctx: Context | None) -> str | None:
+        if ctx is None:
+            return None
+        try:
+            return ctx.session.client_params.clientInfo.name  # type: ignore[attr-defined]
+        except Exception:
+            return None
+
+    def _resolve(
+        actor: str | None, scope: str | None, ctx: Context | None = None
+    ) -> tuple[sqlite3.Connection, str, str, bool]:
         c = _open_live(store)
         sr = resolve_scope(explicit=scope, cwd=Path.cwd())
         if sr.fallback_to_global:
             log.info("scope_fallback_to_global", cwd=str(Path.cwd()))
-        ar = resolve_actor(c, explicit=actor, client_info_name=None)
-        return c, ar.id, sr.scope
+        ar = resolve_actor(
+            c, explicit=actor, client_info_name=_client_info_name(ctx)
+        )
+        return c, ar.id, sr.scope, ar.created
 
     @mcp.tool(
         description=(
@@ -74,12 +86,18 @@ def build_server() -> FastMCP:
         tags: list[str] | None = None,
         originator: str | None = None,
         actor: str | None = None,
+        ctx: Context | None = None,
     ) -> dict:
-        c, aid, s = _resolve(actor, scope)
+        c, aid, s, actor_created = _resolve(actor, scope, ctx)
         out = capture_idea(
             c,
             CaptureInput(
-                content=content, scope=s, actor=aid, originator=originator, tags=tags or []
+                content=content,
+                scope=s,
+                actor=aid,
+                originator=originator,
+                tags=tags or [],
+                actor_created=actor_created,
             ),
         )
         return out.model_dump()
@@ -99,12 +117,13 @@ def build_server() -> FastMCP:
         limit_tokens: int = 50_000,
         include_all_notes: bool = False,
         include_archived: bool = False,
+        ctx: Context | None = None,
     ) -> dict:
-        c, _aid, s = _resolve(None, scope)
+        c, _aid, s, _ = _resolve(None, scope, ctx)
         out = dump_ideas(
             c,
             DumpInput(
-                scope=s if scope is not None else None,
+                scope=s,
                 since=since,
                 actor=actor,
                 originator=originator,
@@ -212,8 +231,9 @@ def build_server() -> FastMCP:
         content: str,
         actor: str | None = None,
         originator: str | None = None,
+        ctx: Context | None = None,
     ) -> dict:
-        c, aid, _ = _resolve(actor, None)
+        c, aid, _, _ = _resolve(actor, None, ctx)
         return annotate_idea(
             c, AnnotateInput(id=id, content=content, actor=aid, originator=originator)
         ).model_dump()
@@ -229,8 +249,9 @@ def build_server() -> FastMCP:
         reason: str,
         actor: str | None = None,
         originator: str | None = None,
+        ctx: Context | None = None,
     ) -> dict:
-        c, aid, _ = _resolve(actor, None)
+        c, aid, _, _ = _resolve(actor, None, ctx)
         return archive_idea(
             c, ArchiveInput(id=id, reason=reason, actor=aid, originator=originator)
         ).model_dump()

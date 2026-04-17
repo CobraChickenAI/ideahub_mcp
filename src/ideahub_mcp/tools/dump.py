@@ -105,6 +105,6 @@ def dump_ideas(conn: sqlite3.Connection, input_: DumpInput) -> DumpOutput:
         blob="\n".join(blocks),
         count=count,
         truncated=truncated,
-        scope_resolved=input_.scope or "",
+        scope_resolved=input_.scope or "global",
         hint=DUMP_HINT,
     )

@@ -30,6 +30,20 @@ def test_capture_idempotent_within_window(conn: sqlite3.Connection) -> None:
     assert a.id == b.id
 
 
+def test_capture_echoes_actor_created(conn: sqlite3.Connection) -> None:
+    _seed_actor(conn)
+    out = capture_idea(
+        conn,
+        CaptureInput(
+            content="novel",
+            actor="human:michael",
+            scope="global",
+            actor_created=True,
+        ),
+    )
+    assert out.actor_created is True
+
+
 def test_capture_suggests_existing_tags(conn: sqlite3.Connection) -> None:
     _seed_actor(conn)
     capture_idea(

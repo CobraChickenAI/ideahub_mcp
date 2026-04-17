@@ -1,8 +1,8 @@
-# Claude Code Configuration
+# <span data-proof="authored" data-by="ai:claude">Claude Code Configuration</span>
 
-Add to `~/.claude/settings.json` under `mcpServers`:
+<span data-proof="authored" data-by="ai:claude">Add to</span> <span data-proof="authored" data-by="ai:claude">`~/.claude/settings.json`</span> <span data-proof="authored" data-by="ai:claude">under</span> <span data-proof="authored" data-by="ai:claude">`mcpServers`:</span>
 
-```json
+```json proof:W3sidHlwZSI6InByb29mQXV0aG9yZWQiLCJmcm9tIjowLCJ0byI6MjcyLCJhdHRycyI6eyJieSI6ImFpOmNsYXVkZSJ9fV0=
 {
   "mcpServers": {
     "ideahub": {
