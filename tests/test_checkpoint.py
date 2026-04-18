@@ -87,3 +87,18 @@ def test_checkpoint_returns_candidates_and_task_context(
     assert prior.id in [c.id for c in out.annotate_candidates]
     assert out.task_context.task_ref == "t1"
     assert isinstance(out.task_context.recent_ids, list)
+
+
+def test_checkpoint_does_not_surface_itself_as_candidate(
+    conn: sqlite3.Connection, seeded_actor: str
+) -> None:
+    out = checkpoint_idea(
+        conn,
+        CheckpointInput(content="unique sentinel content zebra", scope="s1",
+                        actor=seeded_actor),
+    )
+    all_candidate_ids = (
+        {c.id for c in out.annotate_candidates}
+        | {c.id for c in out.related_candidates}
+    )
+    assert out.id not in all_candidate_ids

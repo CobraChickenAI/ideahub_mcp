@@ -102,6 +102,7 @@ def checkpoint_idea(conn: sqlite3.Connection, input_: CheckpointInput) -> Checkp
         scope=input_.scope,
         originator=input_.originator,
         task_ref=input_.task_ref,
+        exclude_id=new_id,
     )
     return CheckpointOutput(
         id=new_id,

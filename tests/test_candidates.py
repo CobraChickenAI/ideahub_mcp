@@ -171,6 +171,31 @@ def test_scorer_handles_fts_reserved_words(conn: sqlite3.Connection) -> None:
     assert isinstance(result.related_candidates, list)
 
 
+def test_scorer_excludes_exclude_id(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        "INSERT INTO actor (id, kind, display_name, first_seen_at) "
+        "VALUES ('a1','agent','a1',datetime('now'))"
+    )
+    conn.execute(
+        "INSERT INTO idea (id, content, scope, actor_id, originator_id, tags, "
+        "                  created_at, kind, task_ref) VALUES "
+        "('self','the exact same content','s1','a1','a1','[]','2026-04-18','idea', NULL),"
+        "('other','the exact same content','s1','a1','a1','[]','2026-04-17','idea', NULL)"
+    )
+    conn.commit()
+    result = score_candidates_for_write(
+        conn,
+        content="the exact same content",
+        scope="s1",
+        originator=None,
+        task_ref=None,
+        exclude_id="self",
+    )
+    ids = {c.id for c in result.related_candidates}
+    assert "self" not in ids
+    assert "other" in ids
+
+
 def test_scorer_empty_on_empty_scope(conn: sqlite3.Connection) -> None:
     # Actor exists but no ideas yet.
     conn.execute(

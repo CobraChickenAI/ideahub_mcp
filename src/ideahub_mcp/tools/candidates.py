@@ -94,6 +94,7 @@ def score_candidates_for_write(
     originator: str | None,
     task_ref: str | None,
     max_candidates: int = 5,
+    exclude_id: str | None = None,
 ) -> WriteCandidates:
     """Produce annotate_candidates and related_candidates for a new write.
 
@@ -105,14 +106,18 @@ def score_candidates_for_write(
     merged: dict[str, _Row] = {}
 
     if query:
-        sql = (
+        fts_sql = (
             "SELECT i.id, i.content, i.kind, i.task_ref, i.originator_id, "
             "       i.created_at, bm25(idea_fts) AS score "
             "FROM idea_fts JOIN idea i ON i.rowid = idea_fts.rowid "
-            "WHERE idea_fts MATCH ? AND i.scope = ? AND i.archived_at IS NULL "
-            "ORDER BY score ASC LIMIT 50"
+            "WHERE idea_fts MATCH ? AND i.scope = ? AND i.archived_at IS NULL"
         )
-        for r in conn.execute(sql, (query, scope)).fetchall():
+        fts_params: list[object] = [query, scope]
+        if exclude_id:
+            fts_sql += " AND i.id != ?"
+            fts_params.append(exclude_id)
+        fts_sql += " ORDER BY score ASC LIMIT 50"
+        for r in conn.execute(fts_sql, fts_params).fetchall():
             rid = str(r[0])
             merged[rid] = _Row(
                 id=rid,
@@ -127,12 +132,16 @@ def score_candidates_for_write(
 
     # Non-FTS side: every in-scope idea for the task_ref/originator/recency rungs
     # when FTS misses. Bounded to keep this cheap on large corpora.
-    nonfts_rows = conn.execute(
+    nonfts_sql = (
         "SELECT id, content, kind, task_ref, originator_id, created_at "
-        "FROM idea WHERE scope = ? AND archived_at IS NULL "
-        "ORDER BY created_at DESC LIMIT 100",
-        (scope,),
-    ).fetchall()
+        "FROM idea WHERE scope = ? AND archived_at IS NULL"
+    )
+    nonfts_params: list[object] = [scope]
+    if exclude_id:
+        nonfts_sql += " AND id != ?"
+        nonfts_params.append(exclude_id)
+    nonfts_sql += " ORDER BY created_at DESC LIMIT 100"
+    nonfts_rows = conn.execute(nonfts_sql, nonfts_params).fetchall()
     for r in nonfts_rows:
         rid = str(r[0])
         if rid in merged:

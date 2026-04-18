@@ -186,3 +186,17 @@ def test_capture_returns_candidates_and_task_context(
     r_ids = {c.id for c in out.related_candidates}
     # At minimum, the new write should see at least one prior in-scope row
     assert len(r_ids) >= 1
+
+
+def test_capture_does_not_surface_itself_as_candidate(conn: sqlite3.Connection) -> None:
+    _seed_actor(conn)
+    out = capture_idea(
+        conn,
+        CaptureInput(content="unique sentinel content zebra", scope="global",
+                     actor="human:michael"),
+    )
+    all_candidate_ids = (
+        {c.id for c in out.annotate_candidates}
+        | {c.id for c in out.related_candidates}
+    )
+    assert out.id not in all_candidate_ids

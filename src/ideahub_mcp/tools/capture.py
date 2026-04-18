@@ -91,6 +91,7 @@ def capture_idea(conn: sqlite3.Connection, input_: CaptureInput) -> CaptureOutpu
             scope=input_.scope,
             originator=input_.originator,
             task_ref=input_.task_ref,
+            exclude_id=dup[0],
         )
         return CaptureOutput(
             id=dup[0],
@@ -129,6 +130,7 @@ def capture_idea(conn: sqlite3.Connection, input_: CaptureInput) -> CaptureOutpu
         scope=input_.scope,
         originator=input_.originator,
         task_ref=input_.task_ref,
+        exclude_id=new_id,
     )
     return CaptureOutput(
         id=new_id,
