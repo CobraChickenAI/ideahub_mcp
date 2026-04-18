@@ -61,3 +61,22 @@ def test_list_preview_truncated_to_120(conn: sqlite3.Connection) -> None:
     capture_idea(conn, CaptureInput(content=long, actor="human:m", scope="global"))
     out = list_ideas(conn, ListInput())
     assert len(out.items[0].preview) == 120
+
+
+def test_list_default_excludes_checkpoints(conn: sqlite3.Connection) -> None:
+    _seed(conn)
+    actor_id = resolve_actor(conn, explicit="human:m", client_info_name=None).id
+    conn.execute(
+        "INSERT INTO idea (id, content, scope, actor_id, tags, created_at, kind) VALUES "
+        "('i1','writeback phase','s1',?, '[]', datetime('now'), 'idea'),"
+        "('c1','writeback phase','s1',?, '[]', datetime('now'), 'checkpoint')",
+        (actor_id, actor_id),
+    )
+    out = list_ideas(conn, ListInput(scope="s1"))
+    ids = {item.id for item in out.items}
+    assert "i1" in ids
+    assert "c1" not in ids
+
+    out2 = list_ideas(conn, ListInput(scope="s1", include_checkpoints=True))
+    ids2 = {item.id for item in out2.items}
+    assert {"i1", "c1"}.issubset(ids2)

@@ -18,6 +18,7 @@ class ListInput(BaseModel):
     until: str | None = None
     limit: int = 50
     include_archived: bool = False
+    include_checkpoints: bool = False
 
     @field_validator("tags_any", "tags_all", mode="before")
     @classmethod
@@ -63,6 +64,8 @@ def list_ideas(conn: sqlite3.Connection, input_: ListInput) -> ListOutput:
         params.append(input_.until)
     if not input_.include_archived:
         where.append("archived_at IS NULL")
+    if not input_.include_checkpoints:
+        where.append("kind = 'idea'")
 
     sql = (
         "SELECT id, content, scope, actor_id, created_at, tags FROM idea"

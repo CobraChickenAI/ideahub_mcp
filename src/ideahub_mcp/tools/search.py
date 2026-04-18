@@ -11,6 +11,7 @@ class SearchInput(BaseModel):
     since: str | None = None
     limit: int = 25
     include_archived: bool = False
+    include_checkpoints: bool = False
 
 
 class SearchHit(BaseModel):
@@ -39,6 +40,8 @@ def search_ideas(conn: sqlite3.Connection, input_: SearchInput) -> SearchOutput:
         params.append(input_.since)
     if not input_.include_archived:
         where.append("i.archived_at IS NULL")
+    if not input_.include_checkpoints:
+        where.append("i.kind = 'idea'")
 
     sql = (
         "SELECT i.id, i.scope, i.actor_id, "
