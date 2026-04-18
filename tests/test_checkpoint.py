@@ -30,12 +30,14 @@ def test_checkpoint_writes_row_with_kind_checkpoint(
         ),
     )
     row = conn.execute(
-        "SELECT kind, task_ref, content FROM idea WHERE id = ?", (out.id,)
+        "SELECT kind, task_ref, content, kind_label FROM idea WHERE id = ?", (out.id,)
     ).fetchone()
     assert row[0] == "checkpoint"
     assert row[1] == "writeback-phase-1"
-    assert row[2] == "[assumption] assumption: the scorer should weight FTS first"
+    assert row[2] == "assumption: the scorer should weight FTS first"
+    assert row[3] == "assumption"
     assert out.kind == "checkpoint"
+    assert out.kind_label == "assumption"
     assert out.task_ref == "writeback-phase-1"
 
 

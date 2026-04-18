@@ -119,8 +119,8 @@ def test_capture_task_ref_is_optional(conn: sqlite3.Connection) -> None:
 def test_capture_dedup_preserves_first_task_ref_and_echoes_caller(
     conn: sqlite3.Connection,
 ) -> None:
-    # Pins the dedup semantics the scorer (Task 6) depends on:
-    # storage keeps the first writer's task_ref; the response echoes the caller's.
+    # Dedup returns the stored task_ref (first writer's), not the caller's.
+    # Both the response field and task_context must reflect the stored value.
     _seed_actor(conn)
     first = capture_idea(
         conn,
@@ -145,7 +145,8 @@ def test_capture_dedup_preserves_first_task_ref_and_echoes_caller(
         "SELECT task_ref FROM idea WHERE id = ?", (first.id,)
     ).fetchone()
     assert row[0] == "A"
-    assert second.task_ref == "B"
+    assert second.task_ref == "A"
+    assert second.task_context.task_ref == "A"
 
 
 def test_capture_returns_candidates_and_task_context(
