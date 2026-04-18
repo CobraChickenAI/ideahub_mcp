@@ -146,3 +146,43 @@ def test_capture_dedup_preserves_first_task_ref_and_echoes_caller(
     ).fetchone()
     assert row[0] == "A"
     assert second.task_ref == "B"
+
+
+def test_capture_returns_candidates_and_task_context(
+    conn: sqlite3.Connection
+) -> None:
+    _seed_actor(conn)
+    # seed a prior idea and a prior checkpoint under the same task
+    from ideahub_mcp.tools.checkpoint import CheckpointInput, checkpoint_idea
+    prior = capture_idea(
+        conn,
+        CaptureInput(content="scorer ladder phase-1", scope="global",
+                     actor="human:michael", task_ref="t1"),
+    )
+    checkpoint_idea(
+        conn,
+        CheckpointInput(content="sibling observation", scope="global",
+                        actor="human:michael", task_ref="t1"),
+    )
+
+    out = capture_idea(
+        conn,
+        CaptureInput(
+            content="scorer ladder final write",
+            scope="global",
+            actor="human:michael",
+            task_ref="t1",
+        ),
+    )
+    # annotate_candidates include the prior idea but not the checkpoint
+    ids = [c.id for c in out.annotate_candidates]
+    assert prior.id in ids
+    kinds = {c.kind for c in out.annotate_candidates}
+    assert kinds.issubset({"idea"})
+    # task_context carries the task_ref and some recent siblings
+    assert out.task_context.task_ref == "t1"
+    assert isinstance(out.task_context.recent_ids, list)
+    # related_candidates can include the sibling checkpoint
+    r_ids = {c.id for c in out.related_candidates}
+    # At minimum, the new write should see at least one prior in-scope row
+    assert len(r_ids) >= 1

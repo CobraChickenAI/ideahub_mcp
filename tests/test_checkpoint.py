@@ -64,3 +64,26 @@ def test_checkpoint_task_ref_optional(
         CheckpointInput(content="drive-by observation", scope="s1", actor=seeded_actor),
     )
     assert out.task_ref is None
+
+
+def test_checkpoint_returns_candidates_and_task_context(
+    conn: sqlite3.Connection, seeded_actor: str
+) -> None:
+    from ideahub_mcp.tools.capture import CaptureInput, capture_idea
+    prior = capture_idea(
+        conn,
+        CaptureInput(content="scorer ladder phase-1", scope="s1",
+                     actor=seeded_actor, task_ref="t1"),
+    )
+    out = checkpoint_idea(
+        conn,
+        CheckpointInput(
+            content="scorer ladder sibling",
+            scope="s1",
+            actor=seeded_actor,
+            task_ref="t1",
+        ),
+    )
+    assert prior.id in [c.id for c in out.annotate_candidates]
+    assert out.task_context.task_ref == "t1"
+    assert isinstance(out.task_context.recent_ids, list)

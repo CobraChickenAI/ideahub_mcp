@@ -5,6 +5,7 @@ import sqlite3
 
 from pydantic import BaseModel, Field, field_validator
 
+from ideahub_mcp.tools.candidates import CandidateItem, score_candidates_for_write
 from ideahub_mcp.util.clock import utcnow_iso
 from ideahub_mcp.util.coerce import coerce_str_list
 from ideahub_mcp.util.ids import new_ulid
@@ -25,6 +26,11 @@ class CaptureInput(BaseModel):
         return coerce_str_list(v)
 
 
+class TaskContext(BaseModel):
+    task_ref: str | None
+    recent_ids: list[str]
+
+
 class CaptureOutput(BaseModel):
     id: str
     scope: str
@@ -34,6 +40,11 @@ class CaptureOutput(BaseModel):
     suggested_tags: list[str]
     actor_created: bool = False
     task_ref: str | None = None
+    annotate_candidates: list[CandidateItem] = Field(default_factory=list)
+    related_candidates: list[CandidateItem] = Field(default_factory=list)
+    task_context: TaskContext = Field(
+        default_factory=lambda: TaskContext(task_ref=None, recent_ids=[])
+    )
 
 
 IDEMPOTENCY_SECONDS = 5
@@ -51,6 +62,19 @@ def _suggest_tags(conn: sqlite3.Connection, content: str, limit: int = 5) -> lis
     return sorted([t for t in known if t.lower() in lowered])[:limit]
 
 
+def _task_context(
+    conn: sqlite3.Connection, task_ref: str | None, current_id: str
+) -> TaskContext:
+    if not task_ref:
+        return TaskContext(task_ref=None, recent_ids=[])
+    rows = conn.execute(
+        "SELECT id FROM idea WHERE task_ref = ? AND id != ? "
+        "ORDER BY created_at DESC LIMIT 10",
+        (task_ref, current_id),
+    ).fetchall()
+    return TaskContext(task_ref=task_ref, recent_ids=[r[0] for r in rows])
+
+
 def capture_idea(conn: sqlite3.Connection, input_: CaptureInput) -> CaptureOutput:
     dup = conn.execute(
         "SELECT id, created_at FROM idea "
@@ -61,6 +85,13 @@ def capture_idea(conn: sqlite3.Connection, input_: CaptureInput) -> CaptureOutpu
     ).fetchone()
     if dup:
         # Dedup: storage keeps first writer's task_ref; response echoes caller's.
+        cands = score_candidates_for_write(
+            conn,
+            content=input_.content,
+            scope=input_.scope,
+            originator=input_.originator,
+            task_ref=input_.task_ref,
+        )
         return CaptureOutput(
             id=dup[0],
             scope=input_.scope,
@@ -70,6 +101,9 @@ def capture_idea(conn: sqlite3.Connection, input_: CaptureInput) -> CaptureOutpu
             suggested_tags=_suggest_tags(conn, input_.content),
             actor_created=input_.actor_created,
             task_ref=input_.task_ref,
+            annotate_candidates=cands.annotate_candidates,
+            related_candidates=cands.related_candidates,
+            task_context=_task_context(conn, input_.task_ref, dup[0]),
         )
 
     new_id = new_ulid()
@@ -89,6 +123,13 @@ def capture_idea(conn: sqlite3.Connection, input_: CaptureInput) -> CaptureOutpu
             input_.task_ref,
         ),
     )
+    cands = score_candidates_for_write(
+        conn,
+        content=input_.content,
+        scope=input_.scope,
+        originator=input_.originator,
+        task_ref=input_.task_ref,
+    )
     return CaptureOutput(
         id=new_id,
         scope=input_.scope,
@@ -98,4 +139,7 @@ def capture_idea(conn: sqlite3.Connection, input_: CaptureInput) -> CaptureOutpu
         suggested_tags=_suggest_tags(conn, input_.content),
         actor_created=input_.actor_created,
         task_ref=input_.task_ref,
+        annotate_candidates=cands.annotate_candidates,
+        related_candidates=cands.related_candidates,
+        task_context=_task_context(conn, input_.task_ref, new_id),
     )
