@@ -87,3 +87,30 @@ def test_capture_suggests_existing_tags(conn: sqlite3.Connection) -> None:
         ),
     )
     assert "mcp" in out.suggested_tags
+
+
+def test_capture_persists_task_ref(conn: sqlite3.Connection) -> None:
+    _seed_actor(conn)
+    out = capture_idea(
+        conn,
+        CaptureInput(
+            content="mid-task observation",
+            scope="global",
+            actor="human:michael",
+            task_ref="writeback-phase-1",
+        ),
+    )
+    row = conn.execute("SELECT task_ref FROM idea WHERE id = ?", (out.id,)).fetchone()
+    assert row[0] == "writeback-phase-1"
+    assert out.task_ref == "writeback-phase-1"
+
+
+def test_capture_task_ref_is_optional(conn: sqlite3.Connection) -> None:
+    _seed_actor(conn)
+    out = capture_idea(
+        conn,
+        CaptureInput(content="anything", scope="global", actor="human:michael"),
+    )
+    row = conn.execute("SELECT task_ref FROM idea WHERE id = ?", (out.id,)).fetchone()
+    assert row[0] is None
+    assert out.task_ref is None
