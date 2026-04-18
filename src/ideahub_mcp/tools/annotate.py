@@ -15,6 +15,7 @@ class AnnotateInput(BaseModel):
     actor: str
     originator: str | None = None
     kind: str | None = None
+    task_ref: str | None = None
 
 
 class AnnotateOutput(BaseModel):
@@ -22,6 +23,7 @@ class AnnotateOutput(BaseModel):
     idea_id: str
     kind: str | None
     created_at: str
+    task_ref: str | None = None
 
 
 def annotate_idea(conn: sqlite3.Connection, input_: AnnotateInput) -> AnnotateOutput:
@@ -36,8 +38,8 @@ def annotate_idea(conn: sqlite3.Connection, input_: AnnotateInput) -> AnnotateOu
     now = utcnow_iso()
     conn.execute(
         "INSERT INTO idea_note "
-        "(id, idea_id, kind, content, actor_id, originator_id, created_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "(id, idea_id, kind, content, actor_id, originator_id, created_at, task_ref) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         (
             note_id,
             input_.id,
@@ -46,8 +48,13 @@ def annotate_idea(conn: sqlite3.Connection, input_: AnnotateInput) -> AnnotateOu
             input_.actor,
             input_.originator,
             now,
+            input_.task_ref,
         ),
     )
     return AnnotateOutput(
-        note_id=note_id, idea_id=input_.id, kind=input_.kind, created_at=now
+        note_id=note_id,
+        idea_id=input_.id,
+        kind=input_.kind,
+        created_at=now,
+        task_ref=input_.task_ref,
     )

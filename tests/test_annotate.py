@@ -34,6 +34,25 @@ def test_annotate_accepts_kind(conn: sqlite3.Connection) -> None:
     assert row[0] == "counterexample"
 
 
+def test_annotate_persists_task_ref(conn: sqlite3.Connection) -> None:
+    resolve_actor(conn, explicit="human:m", client_info_name=None)
+    cap = capture_idea(conn, CaptureInput(content="base", actor="human:m", scope="global"))
+    out = annotate_idea(
+        conn,
+        AnnotateInput(
+            id=cap.id,
+            content="correction",
+            actor="human:m",
+            task_ref="writeback-phase-1",
+        ),
+    )
+    row = conn.execute(
+        "SELECT task_ref FROM idea_note WHERE id = ?", (out.note_id,)
+    ).fetchone()
+    assert row[0] == "writeback-phase-1"
+    assert out.task_ref == "writeback-phase-1"
+
+
 def test_annotate_unknown_raises(conn: sqlite3.Connection) -> None:
     resolve_actor(conn, explicit="human:m", client_info_name=None)
     with pytest.raises(IdeaHubError) as exc:
