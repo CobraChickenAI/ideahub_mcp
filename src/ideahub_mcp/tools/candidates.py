@@ -12,6 +12,7 @@ class CandidateItem(BaseModel):
     preview: str
     score: float
     why: str
+    reasons: list[str]
     created_at: str
 
 
@@ -147,25 +148,35 @@ def score_candidates_for_write(
             fts_hit=False,
         )
 
-    def composite_key(row: _Row) -> tuple[float, int, int, str]:
+    def composite_key(row: _Row) -> tuple[float, int, int, str, str]:
         # Lower is better in every slot. Python's default ascending sort puts the
-        # best candidate first.
+        # best candidate first. Final tiebreaker: row.id lexically ascending,
+        # so fully-tied rows have deterministic ordering.
         fts_rank = row.fts_score if row.fts_score is not None else 1e9
         shared_task = 0 if (task_ref and row.task_ref == task_ref) else 1
         shared_orig = 0 if (originator and row.originator == originator) else 1
-        return (fts_rank, shared_task, shared_orig, _invert_ts(row.created_at))
+        return (fts_rank, shared_task, shared_orig, _invert_ts(row.created_at), row.id)
 
-    def build_why(row: _Row) -> str:
-        parts: list[str] = []
+    def build_reasons(row: _Row) -> list[str]:
+        reasons: list[str] = []
         if row.fts_hit:
-            parts.append("lexical match")
+            reasons.append("lexical_match")
         if task_ref and row.task_ref == task_ref:
-            parts.append("same task")
+            reasons.append("same_task")
         if originator and row.originator == originator:
-            parts.append("shared originator")
-        if not parts:
-            parts.append("recent in scope")
-        return " + ".join(parts)
+            reasons.append("shared_originator")
+        if not reasons:
+            reasons.append("recent_in_scope")
+        return reasons
+
+    def build_why(reasons: list[str]) -> str:
+        human = {
+            "lexical_match": "lexical match",
+            "same_task": "same task",
+            "shared_originator": "shared originator",
+            "recent_in_scope": "recent in scope",
+        }
+        return " + ".join(human[r] for r in reasons)
 
     ranked = sorted(merged.values(), key=composite_key)
 
@@ -174,12 +185,14 @@ def score_candidates_for_write(
     for row in ranked:
         task_match = bool(task_ref) and row.task_ref == task_ref
         orig_match = bool(originator) and row.originator == originator
+        reasons = build_reasons(row)
         item = CandidateItem(
             id=row.id,
             kind=row.kind,
             preview=_preview(row.content),
             score=_display_score(row, task_ref_match=task_match, originator_match=orig_match),
-            why=build_why(row),
+            why=build_why(reasons),
+            reasons=reasons,
             created_at=row.created_at,
         )
         if len(related) < max_candidates:

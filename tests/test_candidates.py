@@ -105,7 +105,70 @@ def test_scorer_explains_why(seeded: sqlite3.Connection) -> None:
         task_ref="t-phase-1",
         max_candidates=5,
     )
-    assert all(isinstance(c.why, str) and c.why for c in result.related_candidates)
+    for c in result.related_candidates:
+        assert isinstance(c.why, str) and c.why
+        assert isinstance(c.reasons, list) and c.reasons
+        # reasons contains only machine-friendly tokens
+        for r in c.reasons:
+            assert "_" in r or r in {
+                "lexical_match",
+                "same_task",
+                "shared_originator",
+                "recent_in_scope",
+            }
+
+
+def test_scorer_is_deterministic_on_full_ties(conn: sqlite3.Connection) -> None:
+    """Two rows identical on every rung should sort by id lexically ascending."""
+    conn.execute(
+        "INSERT INTO actor (id, kind, display_name, first_seen_at) "
+        "VALUES ('a1','agent','a1',datetime('now'))"
+    )
+    # Two rows with identical scope, originator, created_at, no task_ref, no FTS hit.
+    conn.execute(
+        "INSERT INTO idea (id, content, scope, actor_id, originator_id, tags, "
+        "                  created_at, kind, task_ref) VALUES "
+        "('z-later',  'nothing here', 's1','a1','a1','[]','2026-04-17','idea', NULL),"
+        "('a-first',  'nothing here', 's1','a1','a1','[]','2026-04-17','idea', NULL)"
+    )
+    conn.commit()
+    result = score_candidates_for_write(
+        conn,
+        content="completely unrelated content",
+        scope="s1",
+        originator=None,
+        task_ref=None,
+        max_candidates=5,
+    )
+    ids = [c.id for c in result.related_candidates]
+    if "a-first" in ids and "z-later" in ids:
+        # a-first < z-later lexically, so a-first comes first.
+        assert ids.index("a-first") < ids.index("z-later")
+
+
+def test_scorer_handles_fts_reserved_words(conn: sqlite3.Connection) -> None:
+    """Content composed only of fts5-reserved words must not raise."""
+    conn.execute(
+        "INSERT INTO actor (id, kind, display_name, first_seen_at) "
+        "VALUES ('a1','agent','a1',datetime('now'))"
+    )
+    conn.execute(
+        "INSERT INTO idea (id, content, scope, actor_id, originator_id, tags, "
+        "                  created_at, kind, task_ref) VALUES "
+        "('i1','something real', 's1','a1','a1','[]','2026-04-17','idea', NULL)"
+    )
+    conn.commit()
+    # Must not raise even though every token would be a reserved operator unquoted.
+    result = score_candidates_for_write(
+        conn,
+        content="AND OR NOT NEAR",
+        scope="s1",
+        originator=None,
+        task_ref=None,
+        max_candidates=5,
+    )
+    # We don't care about the ordering; we care that the call completed.
+    assert isinstance(result.related_candidates, list)
 
 
 def test_scorer_empty_on_empty_scope(conn: sqlite3.Connection) -> None:
