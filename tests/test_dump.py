@@ -64,3 +64,21 @@ def test_dump_scope_filter(conn: sqlite3.Connection) -> None:
     assert out.count == 1
     assert "\nb\n" in out.blob
     assert "\na\n" not in out.blob
+
+
+def test_dump_default_excludes_checkpoints(conn: sqlite3.Connection) -> None:
+    _seed(conn)
+    actor_id = resolve_actor(conn, explicit="human:m", client_info_name=None).id
+    conn.execute(
+        "INSERT INTO idea (id, content, scope, actor_id, tags, created_at, kind) VALUES "
+        "('i1','writeback phase','s1',?, '[]', datetime('now'), 'idea'),"
+        "('c1','writeback phase','s1',?, '[]', datetime('now'), 'checkpoint')",
+        (actor_id, actor_id),
+    )
+    out = dump_ideas(conn, DumpInput(scope="s1"))
+    assert "i1" in out.blob
+    assert "c1" not in out.blob
+
+    out2 = dump_ideas(conn, DumpInput(scope="s1", include_checkpoints=True))
+    assert "i1" in out2.blob
+    assert "c1" in out2.blob

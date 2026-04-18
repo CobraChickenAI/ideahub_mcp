@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from ideahub_mcp.errors import IdeaHubError
 from ideahub_mcp.util.clock import utcnow_iso
@@ -14,6 +14,14 @@ class LinkInput(BaseModel):
     source_id: str
     target_id: str
     kind: str
+    task_ref: str | None = None
+
+    @field_validator("task_ref", mode="before")
+    @classmethod
+    def _empty_task_ref_to_none(cls, v: object) -> object:
+        if isinstance(v, str) and v == "":
+            return None
+        return v
 
 
 class LinkOutput(BaseModel):
@@ -21,6 +29,7 @@ class LinkOutput(BaseModel):
     target_id: str
     kind: str
     created: bool
+    task_ref: str | None = None
 
 
 def link_ideas(conn: sqlite3.Connection, input_: LinkInput) -> LinkOutput:
@@ -49,15 +58,30 @@ def link_ideas(conn: sqlite3.Connection, input_: LinkInput) -> LinkOutput:
         src, tgt = tgt, src
 
     existing = conn.execute(
-        "SELECT 1 FROM idea_link WHERE source_idea_id = ? AND target_idea_id = ? AND kind = ?",
+        "SELECT task_ref FROM idea_link "
+        "WHERE source_idea_id = ? AND target_idea_id = ? AND kind = ?",
         (src, tgt, input_.kind),
     ).fetchone()
     if existing:
-        return LinkOutput(source_id=src, target_id=tgt, kind=input_.kind, created=False)
+        # Idempotent hit: return the stored task_ref so the caller learns when the
+        # edge was first established. Asymmetric with capture dedup by design.
+        return LinkOutput(
+            source_id=src,
+            target_id=tgt,
+            kind=input_.kind,
+            created=False,
+            task_ref=existing[0],
+        )
 
     conn.execute(
-        "INSERT INTO idea_link (source_idea_id, target_idea_id, kind, created_at) "
-        "VALUES (?, ?, ?, ?)",
-        (src, tgt, input_.kind, utcnow_iso()),
+        "INSERT INTO idea_link (source_idea_id, target_idea_id, kind, created_at, task_ref) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (src, tgt, input_.kind, utcnow_iso(), input_.task_ref),
     )
-    return LinkOutput(source_id=src, target_id=tgt, kind=input_.kind, created=True)
+    return LinkOutput(
+        source_id=src,
+        target_id=tgt,
+        kind=input_.kind,
+        created=True,
+        task_ref=input_.task_ref,
+    )

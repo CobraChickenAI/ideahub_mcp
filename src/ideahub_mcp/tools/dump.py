@@ -19,6 +19,7 @@ class DumpInput(BaseModel):
     limit_tokens: int = 50_000
     include_all_notes: bool = False
     include_archived: bool = False
+    include_checkpoints: bool = False
 
 
 class DumpOutput(BaseModel):
@@ -50,6 +51,8 @@ def dump_ideas(conn: sqlite3.Connection, input_: DumpInput) -> DumpOutput:
         params.append(input_.originator)
     if not input_.include_archived:
         where.append("archived_at IS NULL")
+    if not input_.include_checkpoints:
+        where.append("kind = 'idea'")
 
     sql = (
         "SELECT id, content, scope, actor_id, originator_id, tags, created_at FROM idea"

@@ -6,19 +6,31 @@ The primary user is a model. Tools are short, imperative, example-laden; errors 
 
 ## Tools
 
-| Tool        | Purpose                                                                   |
-| ----------- | ------------------------------------------------------------------------- |
-| `capture`   | Write a new idea. Idempotent within 5s on identical content.              |
-| `dump`      | Text-blob summary of the scoped corpus under a token budget.              |
-| `search`    | FTS5 + bm25 ranked search with snippets.                                  |
-| `list`      | Filter ideas by scope, actor, tags, date range.                           |
-| `get`       | Full detail for one idea, with notes and outbound links.                  |
-| `related`   | Nearest neighbors by tag overlap → shared originator → recency.           |
-| `annotate`  | Append a free-text note to an idea without mutating it.                   |
-| `archive`   | Hide an idea; write a typed `archive` note with reason.                   |
-| `link`      | Connect two ideas (`related`, `supersedes`, `evolved_from`, `duplicate`). |
-| `recognize` | Inspect the actor table.                                                  |
-| `ping`      | Cheap no-side-effect health probe for connection/debugging.               |
+| Tool         | Purpose                                                                                 |
+| ------------ | --------------------------------------------------------------------------------------- |
+| `capture`    | Durable idea. Use when work produces something worth preserving beyond the task.        |
+| `checkpoint` | Lightweight working-memory trace. Use mid-task for observations, decisions, next steps. |
+| `dump`       | Text-blob summary of the scoped corpus under a token budget.                            |
+| `search`     | FTS5 + bm25 ranked search with snippets.                                                |
+| `list`       | Filter ideas by scope, actor, tags, date range.                                         |
+| `get`        | Full detail for one idea, with notes and outbound links.                                |
+| `related`    | Nearest neighbors by tag overlap → shared originator → recency.                         |
+| `annotate`   | Append a free-text note to an idea without mutating it.                                 |
+| `archive`    | Hide an idea; write a typed `archive` note with reason.                                 |
+| `link`       | Connect two ideas (`related`, `supersedes`, `evolved_from`, `duplicate`).               |
+| `recognize`  | Inspect the actor table.                                                                |
+| `ping`       | Cheap no-side-effect health probe for connection/debugging.                             |
+
+## Writeback Loop
+
+`ideahub-mcp` is designed to behave like working memory for an agent, not just searchable storage. Two write verbs close that loop:
+
+- `capture` writes a durable idea that should survive the task.
+- `checkpoint` writes a lightweight in-flight trace — observations, decisions, assumptions, open questions — without the semantic weight of a full idea.
+
+All write-path verbs (`capture`, `checkpoint`, `annotate`, `link`) accept an optional `task_ref` — an opaque free-form string that groups every write from the same task so the stream can be reconstructed later.
+
+`capture` and `checkpoint` return scored `annotate_candidates` and `related_candidates` in their response so the model sees where a fresh trace probably belongs (usually as an annotation on an existing idea) without having to search. Checkpoints are default-excluded from `search`, `list`, and `dump` so cheap traces do not bleed into orientation surfaces — opt in with `include_checkpoints=True`.
 
 ## Discovery And Health
 

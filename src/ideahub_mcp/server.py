@@ -17,6 +17,7 @@ from ideahub_mcp.storage.migrations import apply_pending_migrations
 from ideahub_mcp.tools.annotate import AnnotateInput, annotate_idea
 from ideahub_mcp.tools.archive import ArchiveInput, archive_idea
 from ideahub_mcp.tools.capture import CaptureInput, capture_idea
+from ideahub_mcp.tools.checkpoint import CheckpointInput, checkpoint_idea
 from ideahub_mcp.tools.dump import DumpInput, dump_ideas
 from ideahub_mcp.tools.get import GetInput, get_idea
 from ideahub_mcp.tools.link import LinkInput, link_ideas
@@ -54,7 +55,7 @@ def build_server() -> FastMCP:
     mcp = FastMCP("ideahub-mcp", version=__version__)
 
     tool_names = (
-        "capture", "dump", "search", "list", "get",
+        "capture", "checkpoint", "dump", "search", "list", "get",
         "related", "annotate", "archive", "link", "recognize", "ping",
     )
 
@@ -104,9 +105,15 @@ def build_server() -> FastMCP:
 
     @mcp.tool(
         description=(
-            "Capture a new idea. Use whenever something is worth remembering, however vague. "
+            "Capture a new durable idea. "
+            "Use when: you reach a stable synthesis; you discover a reusable pattern; "
+            "you want a standalone idea that should survive task boundaries; a checkpoint "
+            "has hardened into a first-class concept. "
+            "If you only need a lightweight in-progress trace, use `checkpoint` instead. "
             "`content` is required. `scope` and `actor` default from cwd and environment. "
-            "Returns the idea id plus non-binding `suggested_tags` drawn from existing tags. "
+            "Optional `task_ref` groups all writes from the same task. "
+            "Returns `annotate_candidates` and `related_candidates` so the next memory "
+            "move is obvious. "
             "Idempotent within 5 seconds on identical content."
         )
     )
@@ -115,6 +122,7 @@ def build_server() -> FastMCP:
         scope: str | None = None,
         tags: list[str] | None = None,
         originator: str | None = None,
+        task_ref: str | None = None,
         actor: str | None = None,
         ctx: Context | None = None,
     ) -> dict:
@@ -127,6 +135,48 @@ def build_server() -> FastMCP:
                 actor=aid,
                 originator=originator,
                 tags=tags or [],
+                task_ref=task_ref,
+                actor_created=actor_created,
+            ),
+        )
+        return out.model_dump()
+
+    @mcp.tool(
+        description=(
+            "Write a lightweight working-memory trace during a task. "
+            "Use when: you form a non-trivial synthesis mid-task; you make a decision the "
+            "session will depend on; you want a durable breadcrumb without promoting it "
+            "to a full idea yet; you want to leave a visible trace of what changed in "
+            "your understanding during the task. Do not use for final, standalone ideas "
+            "that should survive the task — use `capture` for those. "
+            "Optional `task_ref` groups all writes from the same task. Optional "
+            "`kind_label` is a semantic hint (observation | decision | assumption | "
+            "question | next_step). "
+            "Returns scored `annotate_candidates` (existing ideas this trace may update) "
+            "and `related_candidates` so the next memory move is obvious."
+        )
+    )
+    def checkpoint(
+        content: str,
+        scope: str | None = None,
+        tags: list[str] | None = None,
+        originator: str | None = None,
+        task_ref: str | None = None,
+        kind_label: str | None = None,
+        actor: str | None = None,
+        ctx: Context | None = None,
+    ) -> dict:
+        c, aid, s, actor_created = _resolve(actor, scope, ctx)
+        out = checkpoint_idea(
+            c,
+            CheckpointInput(
+                content=content,
+                scope=s,
+                actor=aid,
+                originator=originator,
+                tags=tags or [],
+                task_ref=task_ref,
+                kind_label=kind_label,
                 actor_created=actor_created,
             ),
         )
@@ -136,7 +186,9 @@ def build_server() -> FastMCP:
         description=(
             "Dump the scoped corpus as a single text blob under a token budget. "
             "Use for orientation — 'what does this repo/user think about?'. "
-            "Newest ideas first, latest note inlined by default, archived excluded by default."
+            "Newest ideas first, latest note inlined by default, archived excluded by default. "
+            "By default excludes kind='checkpoint' rows; pass "
+            "include_checkpoints=True to include them."
         )
     )
     def dump(
@@ -147,6 +199,7 @@ def build_server() -> FastMCP:
         limit_tokens: int = 50_000,
         include_all_notes: bool = False,
         include_archived: bool = False,
+        include_checkpoints: bool = False,
         ctx: Context | None = None,
     ) -> dict:
         c, _aid, s, _ = _resolve(None, scope, ctx)
@@ -160,6 +213,7 @@ def build_server() -> FastMCP:
                 limit_tokens=limit_tokens,
                 include_all_notes=include_all_notes,
                 include_archived=include_archived,
+                include_checkpoints=include_checkpoints,
             ),
         )
         return out.model_dump()
@@ -167,7 +221,9 @@ def build_server() -> FastMCP:
     @mcp.tool(
         description=(
             "Full-text search ideas with FTS5 + bm25 ranking. Returns snippet, score, and id. "
-            "Scope-optional; archived excluded by default."
+            "Scope-optional; archived excluded by default. "
+            "By default excludes kind='checkpoint' rows; pass "
+            "include_checkpoints=True to include them."
         )
     )
     def search(
@@ -176,6 +232,7 @@ def build_server() -> FastMCP:
         since: str | None = None,
         limit: int = 25,
         include_archived: bool = False,
+        include_checkpoints: bool = False,
     ) -> dict:
         c = _open_live(store)
         out = search_ideas(
@@ -186,6 +243,7 @@ def build_server() -> FastMCP:
                 since=since,
                 limit=limit,
                 include_archived=include_archived,
+                include_checkpoints=include_checkpoints,
             ),
         )
         return out.model_dump()
@@ -194,7 +252,9 @@ def build_server() -> FastMCP:
         description=(
             "List ideas with filters (scope, actor, originator, tags_any, tags_all, since, until). "
             "Returns id, scope, actor, preview (120 chars), and created_at. "
-            "Archived excluded by default."
+            "Archived excluded by default. "
+            "By default excludes kind='checkpoint' rows; pass "
+            "include_checkpoints=True to include them."
         )
     )
     def list(  # noqa: A001
@@ -207,6 +267,7 @@ def build_server() -> FastMCP:
         until: str | None = None,
         limit: int = 50,
         include_archived: bool = False,
+        include_checkpoints: bool = False,
     ) -> dict:
         c = _open_live(store)
         out = list_ideas(
@@ -221,6 +282,7 @@ def build_server() -> FastMCP:
                 until=until,
                 limit=limit,
                 include_archived=include_archived,
+                include_checkpoints=include_checkpoints,
             ),
         )
         return out.model_dump()
@@ -234,7 +296,9 @@ def build_server() -> FastMCP:
         description=(
             "Find ideas related to the given id. Scoring: (1) tag overlap DESC, "
             "(2) shared originator (True first), (3) recency DESC. "
-            "Within source scope unless cross_scope=True; archived excluded by default."
+            "Within source scope unless cross_scope=True; archived excluded by default. "
+            "By default excludes kind='checkpoint' rows; pass "
+            "include_checkpoints=True to include them."
         )
     )
     def related(
@@ -242,21 +306,30 @@ def build_server() -> FastMCP:
         max: int = 10,  # noqa: A002
         cross_scope: bool = False,
         include_archived: bool = False,
+        include_checkpoints: bool = False,
     ) -> dict:
         c = _open_live(store)
         return related_ideas(
             c,
             RelatedInput(
-                id=id, max=max, cross_scope=cross_scope, include_archived=include_archived
+                id=id,
+                max=max,
+                cross_scope=cross_scope,
+                include_archived=include_archived,
+                include_checkpoints=include_checkpoints,
             ),
         ).model_dump()
 
     @mcp.tool(
         description=(
-            "Append a free-text note to an existing idea. Does not mutate the idea content. "
-            "Optional `kind` labels the note semantically — recommended values: "
-            "'confirmation', 'counterexample', 'observation', 'follow-up', 'question', "
-            "'correction'. Leave unset for uncategorized notes."
+            "Append a note to an existing idea when current work confirms, sharpens, "
+            "corrects, or extends it. "
+            "Use when: the current task materially updates an existing idea; you want "
+            "to attach new evidence or a correction; you do not want to create a "
+            "separate idea. "
+            "Optional `kind` labels the note semantically (confirmation, counterexample, "
+            "observation, follow-up, question, correction). Optional `task_ref` groups "
+            "all writes from the same task."
         )
     )
     def annotate(
@@ -265,13 +338,19 @@ def build_server() -> FastMCP:
         kind: str | None = None,
         actor: str | None = None,
         originator: str | None = None,
+        task_ref: str | None = None,
         ctx: Context | None = None,
     ) -> dict:
         c, aid, _, _ = _resolve(actor, None, ctx)
         return annotate_idea(
             c,
             AnnotateInput(
-                id=id, content=content, kind=kind, actor=aid, originator=originator
+                id=id,
+                content=content,
+                kind=kind,
+                actor=aid,
+                originator=originator,
+                task_ref=task_ref,
             ),
         ).model_dump()
 
@@ -295,14 +374,28 @@ def build_server() -> FastMCP:
 
     @mcp.tool(
         description=(
-            "Link two ideas with kind in {related, supersedes, evolved_from, duplicate}. "
-            "`related` is canonicalized (smaller id becomes source). Self-links rejected."
+            "Connect two ideas when current work reveals they are structurally related, "
+            "evolved, duplicated, or superseding one another. "
+            "`kind` ∈ {related, supersedes, evolved_from, duplicate}. `related` is "
+            "canonicalized (smaller id becomes source). Self-links rejected. Optional "
+            "`task_ref` groups all writes from the same task."
         )
     )
-    def link(source_id: str, target_id: str, kind: str) -> dict:
+    def link(
+        source_id: str,
+        target_id: str,
+        kind: str,
+        task_ref: str | None = None,
+    ) -> dict:
         c = _open_live(store)
         return link_ideas(
-            c, LinkInput(source_id=source_id, target_id=target_id, kind=kind)
+            c,
+            LinkInput(
+                source_id=source_id,
+                target_id=target_id,
+                kind=kind,
+                task_ref=task_ref,
+            ),
         ).model_dump()
 
     @mcp.tool(
