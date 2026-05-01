@@ -3,27 +3,22 @@ from __future__ import annotations
 import json
 import sqlite3
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
-from ideahub_mcp.util.coerce import coerce_str_list
+from ideahub_mcp.util.types import StrList
 
 
 class ListInput(BaseModel):
     scope: str | None = None
     actor: str | None = None
     originator: str | None = None
-    tags_any: list[str] = Field(default_factory=list)
-    tags_all: list[str] = Field(default_factory=list)
+    tags_any: StrList = Field(default_factory=list)
+    tags_all: StrList = Field(default_factory=list)
     since: str | None = None
     until: str | None = None
     limit: int = 50
     include_archived: bool = False
     include_checkpoints: bool = False
-
-    @field_validator("tags_any", "tags_all", mode="before")
-    @classmethod
-    def _coerce_tag_list(cls, v: object) -> list[str]:
-        return coerce_str_list(v)
 
 
 class ListItem(BaseModel):
