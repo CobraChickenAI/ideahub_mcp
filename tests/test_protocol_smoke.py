@@ -26,6 +26,7 @@ EXPECTED_TOOLS = {
     "recognize",
     "ping",
     "checkpoint",
+    "promote",
 }
 
 
