@@ -6,11 +6,13 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-from ideahub_mcp.tools.candidates import CandidateItem, score_candidates_for_write
+from ideahub_mcp.tools.candidates import CandidateItem, candidates_or_empty
 from ideahub_mcp.tools.capture import TaskContext
 from ideahub_mcp.util.clock import utcnow_iso
-from ideahub_mcp.util.coerce import coerce_str_list
+from ideahub_mcp.util.coerce import normalize_task_ref
+from ideahub_mcp.util.hashing import compute_content_hash
 from ideahub_mcp.util.ids import new_ulid
+from ideahub_mcp.util.types import StrList
 
 
 class CheckpointInput(BaseModel):
@@ -18,24 +20,18 @@ class CheckpointInput(BaseModel):
     scope: str
     actor: str
     originator: str | None = None
-    tags: list[str] = Field(default_factory=list)
+    tags: StrList = Field(default_factory=list)
     task_ref: str | None = None
     kind_label: (
         Literal["observation", "decision", "assumption", "question", "next_step"] | None
     ) = None
     actor_created: bool = False
-
-    @field_validator("tags", mode="before")
-    @classmethod
-    def _coerce_tags(cls, v: object) -> list[str]:
-        return coerce_str_list(v)
+    candidates: int = Field(5, ge=0, le=10)
 
     @field_validator("task_ref", mode="before")
     @classmethod
-    def _empty_task_ref_to_none(cls, v: object) -> object:
-        if isinstance(v, str) and v == "":
-            return None
-        return v
+    def _normalize_task_ref(cls, v: object) -> object:
+        return normalize_task_ref(v)
 
 
 class CheckpointOutput(BaseModel):
@@ -88,8 +84,8 @@ def checkpoint_idea(conn: sqlite3.Connection, input_: CheckpointInput) -> Checkp
     conn.execute(
         "INSERT INTO idea "
         "(id, content, scope, actor_id, originator_id, tags, created_at, kind, task_ref,"
-        " kind_label) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, 'checkpoint', ?, ?)",
+        " kind_label, content_hash) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, 'checkpoint', ?, ?, ?)",
         (
             new_id,
             input_.content,
@@ -100,10 +96,12 @@ def checkpoint_idea(conn: sqlite3.Connection, input_: CheckpointInput) -> Checkp
             now,
             input_.task_ref,
             input_.kind_label,
+            compute_content_hash(input_.content),
         ),
     )
-    cands = score_candidates_for_write(
+    cands = candidates_or_empty(
         conn,
+        candidates=input_.candidates,
         content=input_.content,
         scope=input_.scope,
         originator=input_.originator,
