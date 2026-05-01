@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from ideahub_mcp.errors import IdeaHubError
 from ideahub_mcp.util.clock import utcnow_iso
+from ideahub_mcp.util.coerce import normalize_task_ref
 from ideahub_mcp.util.ids import new_ulid
 
 
@@ -19,10 +20,8 @@ class AnnotateInput(BaseModel):
 
     @field_validator("task_ref", mode="before")
     @classmethod
-    def _empty_task_ref_to_none(cls, v: object) -> object:
-        if isinstance(v, str) and v == "":
-            return None
-        return v
+    def _normalize_task_ref(cls, v: object) -> object:
+        return normalize_task_ref(v)
 
 
 class AnnotateOutput(BaseModel):
