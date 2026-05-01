@@ -5,7 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from ideahub_mcp.util.fts import fts_match_clause, raw_fts_query, sanitize_fts_query
+from ideahub_mcp.errors import IdeaHubError
+from ideahub_mcp.util.fts import raw_fts_query, sanitize_fts_query
 
 
 class SearchInput(BaseModel):
@@ -41,7 +42,7 @@ def search_ideas(conn: sqlite3.Connection, input_: SearchInput) -> SearchOutput:
     else:
         match_query = raw_fts_query(input_.query)
 
-    where = [fts_match_clause()]
+    where = ["idea_fts MATCH ?"]
     params: list[object] = [match_query]
     if input_.scope:
         where.append("i.scope = ?")
@@ -65,7 +66,16 @@ def search_ideas(conn: sqlite3.Connection, input_: SearchInput) -> SearchOutput:
         "LIMIT ?"
     )
     params.append(input_.limit)
-    rows = conn.execute(sql, params).fetchall()
+    try:
+        rows = conn.execute(sql, params).fetchall()
+    except sqlite3.OperationalError as exc:
+        # Raw-mode FTS5 syntax errors surface here. Auto-mode queries are
+        # pre-sanitized so should not reach this branch.
+        raise IdeaHubError(
+            code="invalid_query",
+            message=f"FTS5 syntax error: {exc}",
+            fix="Fix the FTS5 expression, or use query_mode='auto'.",
+        ) from exc
     hits = [
         SearchHit(
             id=r[0],
