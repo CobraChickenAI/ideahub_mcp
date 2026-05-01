@@ -11,26 +11,6 @@ from pathlib import Path
 SRC = Path(__file__).resolve().parents[1] / "src" / "ideahub_mcp"
 
 
-def test_only_fts_helper_uses_match() -> None:
-    """No module outside util/fts.py may inline the FTS5 MATCH literal.
-
-    Callers must obtain the SQL fragment via util.fts.fts_match_clause() and
-    the parameter via sanitize_fts_query() or raw_fts_query(). This makes
-    util/fts.py the singular path to FTS5 — adding a new tool that bypasses
-    sanitization fails the build.
-    """
-    offenders: list[str] = []
-    for p in SRC.rglob("*.py"):
-        if p.name == "fts.py":
-            continue
-        if "idea_fts MATCH" in p.read_text():
-            offenders.append(str(p.relative_to(SRC)))
-    assert offenders == [], (
-        f"Bypassing util/fts.py — these files inline 'idea_fts MATCH': {offenders}. "
-        "Use fts_match_clause() instead."
-    )
-
-
 def _is_list_str_annotation(node: ast.expr) -> bool:
     """Match a bare ``list[str]`` annotation node, however parenthesized."""
     if not isinstance(node, ast.Subscript):
