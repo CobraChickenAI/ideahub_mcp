@@ -89,3 +89,54 @@ def test_migration_002_adds_kind_and_task_ref(conn: sqlite3.Connection) -> None:
     ).fetchall()}
     assert "idea_kind_idx" in idxs
     assert "idea_task_ref_idx" in idxs
+
+
+def test_migration_004_adds_content_hash_column_and_index(
+    conn: sqlite3.Connection,
+) -> None:
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(idea)").fetchall()}
+    assert "content_hash" in cols
+    idxs = {
+        r[0]
+        for r in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='index'"
+        ).fetchall()
+    }
+    assert "idea_scope_hash_idx" in idxs
+
+
+def test_migration_004_backfills_content_hash(tmp_path: Path) -> None:
+    """Pre-existing rows without content_hash get backfilled to the canonical
+    hash on migration 004 — the same value the runtime computes."""
+    from ideahub_mcp.util.hashing import compute_content_hash
+
+    db = tmp_path / "t.db"
+    with open_connection(db) as c:
+        # Apply only 001-003 by hand to simulate a pre-004 store.
+        partial_dir = tmp_path / "migrations_partial"
+        partial_dir.mkdir()
+        for name in (
+            "001_init.sql",
+            "002_kind_and_task_ref.sql",
+            "003_checkpoint_kind_label.sql",
+        ):
+            (partial_dir / name).write_text((MIGRATIONS_DIR / name).read_text())
+        apply_pending_migrations(c, partial_dir)
+
+        c.execute(
+            "INSERT INTO actor (id, kind, display_name, first_seen_at) "
+            "VALUES ('a','agent','a',datetime('now'))"
+        )
+        c.execute(
+            "INSERT INTO idea (id, content, scope, actor_id, tags, created_at) "
+            "VALUES ('i1','  Hashable Content  ','s','a','[]',datetime('now'))"
+        )
+
+        # Now apply the full migrations directory — migration 004 should run
+        # and backfill content_hash for the row inserted above.
+        apply_pending_migrations(c, MIGRATIONS_DIR)
+
+        row = c.execute(
+            "SELECT content_hash FROM idea WHERE id = 'i1'"
+        ).fetchone()
+        assert row[0] == compute_content_hash("  Hashable Content  ")
