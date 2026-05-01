@@ -108,6 +108,55 @@ def test_checkpoint_empty_task_ref_becomes_none(
     assert out.task_ref is None
 
 
+def test_checkpoint_candidates_zero_returns_empty_lists(
+    conn: sqlite3.Connection, seeded_actor: str
+) -> None:
+    from ideahub_mcp.tools.capture import CaptureInput, capture_idea
+
+    capture_idea(
+        conn,
+        CaptureInput(content="seed idea", scope="s1", actor=seeded_actor),
+    )
+    out = checkpoint_idea(
+        conn,
+        CheckpointInput(
+            content="another trace",
+            scope="s1",
+            actor=seeded_actor,
+            candidates=0,
+        ),
+    )
+    assert out.annotate_candidates == []
+    assert out.related_candidates == []
+
+
+def test_checkpoint_candidates_param_caps_response(
+    conn: sqlite3.Connection, seeded_actor: str
+) -> None:
+    from ideahub_mcp.tools.capture import CaptureInput, capture_idea
+
+    for i in range(8):
+        capture_idea(
+            conn,
+            CaptureInput(
+                content=f"scorer phase trace number {i}",
+                scope="s1",
+                actor=seeded_actor,
+            ),
+        )
+    out = checkpoint_idea(
+        conn,
+        CheckpointInput(
+            content="another scorer phase trace",
+            scope="s1",
+            actor=seeded_actor,
+            candidates=2,
+        ),
+    )
+    assert len(out.annotate_candidates) <= 2
+    assert len(out.related_candidates) <= 2
+
+
 def test_checkpoint_does_not_surface_itself_as_candidate(
     conn: sqlite3.Connection, seeded_actor: str
 ) -> None:
