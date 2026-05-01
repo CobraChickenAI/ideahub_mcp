@@ -21,7 +21,7 @@ class CaptureInput(BaseModel):
     tags: StrList = Field(default_factory=list)
     actor_created: bool = False
     task_ref: str | None = None
-    candidates: int = Field(5, ge=0, le=10)
+    candidates: int = Field(default=5, ge=0, le=10)
 
     @field_validator("task_ref", mode="before")
     @classmethod
