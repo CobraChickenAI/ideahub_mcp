@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import sqlite3
+from typing import Literal
 
 from pydantic import BaseModel
+
+from ideahub_mcp.util.fts import fts_match_clause, raw_fts_query, sanitize_fts_query
 
 
 class SearchInput(BaseModel):
@@ -12,6 +15,7 @@ class SearchInput(BaseModel):
     limit: int = 25
     include_archived: bool = False
     include_checkpoints: bool = False
+    query_mode: Literal["auto", "raw"] = "auto"
 
 
 class SearchHit(BaseModel):
@@ -30,8 +34,15 @@ class SearchOutput(BaseModel):
 
 
 def search_ideas(conn: sqlite3.Connection, input_: SearchInput) -> SearchOutput:
-    where = ["idea_fts MATCH ?"]
-    params: list[object] = [input_.query]
+    if input_.query_mode == "auto":
+        match_query = sanitize_fts_query(input_.query)
+        if not match_query:
+            return SearchOutput(hits=[], count=0, query=input_.query)
+    else:
+        match_query = raw_fts_query(input_.query)
+
+    where = [fts_match_clause()]
+    params: list[object] = [match_query]
     if input_.scope:
         where.append("i.scope = ?")
         params.append(input_.scope)
