@@ -5,6 +5,7 @@ import sqlite3
 
 from pydantic import BaseModel, Field, field_validator
 
+from ideahub_mcp.tools._shared import TaskContext, suggest_tags, task_context
 from ideahub_mcp.tools.candidates import CandidateItem, candidates_or_empty
 from ideahub_mcp.util.clock import utcnow_iso
 from ideahub_mcp.util.coerce import normalize_task_ref
@@ -29,11 +30,6 @@ class CaptureInput(BaseModel):
         return normalize_task_ref(v)
 
 
-class TaskContext(BaseModel):
-    task_ref: str | None
-    recent_ids: list[str]
-
-
 class CaptureOutput(BaseModel):
     id: str
     scope: str
@@ -51,32 +47,6 @@ class CaptureOutput(BaseModel):
 
 
 IDEMPOTENCY_SECONDS = 5
-
-
-def _suggest_tags(conn: sqlite3.Connection, content: str, limit: int = 5) -> list[str]:
-    rows = conn.execute("SELECT tags FROM idea WHERE tags != '[]'").fetchall()
-    known: set[str] = set()
-    for (tags_json,) in rows:
-        try:
-            known.update(json.loads(tags_json))
-        except json.JSONDecodeError:
-            continue
-    lowered = content.lower()
-    return sorted([t for t in known if t.lower() in lowered])[:limit]
-
-
-# Intentionally duplicated in checkpoint.py — keep in sync.
-def _task_context(
-    conn: sqlite3.Connection, task_ref: str | None, current_id: str
-) -> TaskContext:
-    if not task_ref:
-        return TaskContext(task_ref=None, recent_ids=[])
-    rows = conn.execute(
-        "SELECT id FROM idea WHERE task_ref = ? AND id != ? "
-        "ORDER BY created_at DESC LIMIT 10",
-        (task_ref, current_id),
-    ).fetchall()
-    return TaskContext(task_ref=task_ref, recent_ids=[r[0] for r in rows])
 
 
 def _dedup_response(
@@ -103,12 +73,12 @@ def _dedup_response(
         actor=input_.actor,
         originator=input_.originator,
         created_at=existing_created_at,
-        suggested_tags=_suggest_tags(conn, input_.content),
+        suggested_tags=suggest_tags(conn, input_.content),
         actor_created=input_.actor_created,
         task_ref=stored_task_ref,
         annotate_candidates=cands.annotate_candidates,
         related_candidates=cands.related_candidates,
-        task_context=_task_context(conn, stored_task_ref, existing_id),
+        task_context=task_context(conn, stored_task_ref, existing_id),
     )
 
 
@@ -220,10 +190,10 @@ def capture_idea(conn: sqlite3.Connection, input_: CaptureInput) -> CaptureOutpu
         actor=input_.actor,
         originator=input_.originator,
         created_at=now,
-        suggested_tags=_suggest_tags(conn, input_.content),
+        suggested_tags=suggest_tags(conn, input_.content),
         actor_created=input_.actor_created,
         task_ref=input_.task_ref,
         annotate_candidates=cands.annotate_candidates,
         related_candidates=cands.related_candidates,
-        task_context=_task_context(conn, input_.task_ref, new_id),
+        task_context=task_context(conn, input_.task_ref, new_id),
     )
