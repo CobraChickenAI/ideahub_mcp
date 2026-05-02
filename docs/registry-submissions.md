@@ -9,21 +9,21 @@ Submit as a PR to [https://github.com/modelcontextprotocol/servers](https://gith
 **Line to add:**
 
 ```markdown
-- [ideahub-mcp](https://github.com/CobraChickenAI/ideahub-mcp) - Agent-first idea capture and recall with FTS5 search, scope/actor resolution, and idempotent writes.
+- [ideahub_mcp](https://github.com/CobraChickenAI/ideahub-mcp) - Agent-first idea capture and recall with FTS5 search, scope/actor resolution, and idempotent writes.
 ```
 
-**PR title:** `Add ideahub-mcp to community servers`
+**PR title:** `Add ideahub_mcp to community servers`
 
 **PR body:**
 
 ```
-Adds ideahub-mcp, an agent-first MCP server for capturing and recalling ideas.
+Adds ideahub_mcp, an agent-first MCP server for capturing and recalling ideas.
 
 Ten tools over a single SQLite store: capture, dump, search, list, get, related, annotate, archive, link, recognize. Built for the model as primary user — tool descriptions are prompts, errors carry a repair path, scope and actor resolve from MCP clientInfo + cwd without asking.
 
 - Repo: https://github.com/CobraChickenAI/ideahub-mcp
-- PyPI: https://pypi.org/project/ideahub-mcp/
-- Install: `uvx ideahub-mcp`
+- PyPI: https://pypi.org/project/ideahub_mcp/
+- Install: `uvx ideahub_mcp`
 - License: MIT
 ```
 
@@ -35,13 +35,13 @@ Submit via the web UI at [https://smithery.ai/new](https://smithery.ai/new) (req
 
 * **Repository**: `CobraChickenAI/ideahub-mcp`
 
-* **Display name**: `ideahub-mcp`
+* **Display name**: `ideahub_mcp`
 
 * **Tagline**: `Agent-first idea capture and recall.`
 
 * **Category**: `Productivity` (or `Memory`, if they have it)
 
-* **Install command**: `uvx ideahub-mcp`
+* **Install command**: `uvx ideahub_mcp`
 
 * **Config schema**: point at the env vars (`IDEAHUB_MCP_HOME`, `IDEAHUB_ACTOR`, `IDEAHUB_SCOPE`) — Smithery may auto-detect from a `smithery.yaml` if present.
 
@@ -51,7 +51,7 @@ If Smithery requires a `smithery.yaml`, drop this at repo root:
 startCommand:
   type: stdio
   command: uvx
-  args: [ideahub-mcp]
+  args: [ideahub_mcp]
   env:
     IDEAHUB_MCP_HOME: ${IDEAHUB_MCP_HOME}
     IDEAHUB_ACTOR: ${IDEAHUB_ACTOR}
@@ -64,7 +64,7 @@ startCommand:
 
 ```json
 {
-  "name": "ideahub-mcp",
+  "name": "ideahub_mcp",
   "description": "Agent-first idea capture and recall with FTS5 search.",
   "vendor": "CobraChickenAI",
   "sourceUrl": "https://github.com/CobraChickenAI/ideahub-mcp",
