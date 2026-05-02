@@ -45,7 +45,7 @@ The server is discoverability-healthy if a generic client can answer:
 - what does it do?
 - what is the cheapest no-side-effect probe?
 
-For `ideahub-mcp`, the canonical low-cost probes are:
+For `ideahub_mcp`, the canonical low-cost probes are:
 
 - `ping`
 - `ideahub://status`
@@ -62,9 +62,9 @@ Examples:
 
 The server should not require one specific host behavior to feel healthy.
 
-## ideahub-mcp Contract
+## ideahub_mcp Contract
 
-`ideahub-mcp` is intentionally tool-first. Non-empty resources are not required for
+`ideahub_mcp` is intentionally tool-first. Non-empty resources are not required for
 correctness, but the server still exposes a status resource so a generic client does
 not mistake "no business resources" for "no server."
 
@@ -82,7 +82,7 @@ Current expectations:
 For generic MCP clients, the minimum compatibility smoke test is:
 
 1. initialize the server
-2. assert `serverInfo.name == "ideahub-mcp"`
+2. assert `serverInfo.name == "ideahub_mcp"`
 3. assert `serverInfo.version` matches the package version
 4. call `list_tools()`
 5. assert `ping` is present
