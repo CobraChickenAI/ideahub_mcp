@@ -43,7 +43,7 @@ async def test_stdio_health_contract(tmp_home: Path) -> None:
         ClientSession(read, write) as session,
     ):
         init = await session.initialize()
-        assert init.serverInfo.name == "ideahub-mcp"
+        assert init.serverInfo.name == "ideahub_mcp"
         assert init.serverInfo.version == __version__
 
         tools_result = await session.list_tools()
@@ -55,7 +55,7 @@ async def test_stdio_health_contract(tmp_home: Path) -> None:
         assert isinstance(ping_text, TextContent)
         ping_payload = json.loads(ping_text.text)
         assert ping_payload["ok"] is True
-        assert ping_payload["name"] == "ideahub-mcp"
+        assert ping_payload["name"] == "ideahub_mcp"
         assert ping_payload["version"] == __version__
 
         resources_result = await session.list_resources()
@@ -66,6 +66,6 @@ async def test_stdio_health_contract(tmp_home: Path) -> None:
         status_contents = status_result.contents[0]
         assert isinstance(status_contents, TextResourceContents)
         status_payload = json.loads(status_contents.text)
-        assert status_payload["name"] == "ideahub-mcp"
+        assert status_payload["name"] == "ideahub_mcp"
         assert status_payload["version"] == __version__
         assert set(status_payload["tools"]) == EXPECTED_TOOLS
