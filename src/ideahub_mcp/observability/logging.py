@@ -8,7 +8,7 @@ import structlog
 
 def configure_logging(log_dir: Path) -> None:
     log_dir.mkdir(parents=True, exist_ok=True)
-    handler = logging.FileHandler(log_dir / "ideahub-mcp.log")
+    handler = logging.FileHandler(log_dir / "ideahub_mcp.log")
     handler.setLevel(logging.INFO)
     handler.setFormatter(logging.Formatter("%(message)s"))
     root = logging.getLogger()
