@@ -25,6 +25,7 @@ from ideahub_mcp.tools.link import LinkInput, link_ideas
 from ideahub_mcp.tools.list_ideas import ListInput, list_ideas
 from ideahub_mcp.tools.promote import PromoteInput, promote_checkpoint
 from ideahub_mcp.tools.recognize import RecognizeInput, recognize_actor
+from ideahub_mcp.tools.register import RegisterInput, register_actor
 from ideahub_mcp.tools.related import RelatedInput, related_ideas
 from ideahub_mcp.tools.search import SearchInput, search_ideas
 
@@ -58,7 +59,7 @@ def build_server() -> FastMCP:
 
     tool_names = (
         "capture", "checkpoint", "promote", "dump", "search", "list", "get",
-        "related", "annotate", "archive", "link", "recognize", "ping",
+        "related", "annotate", "archive", "link", "recognize", "register", "ping",
     )
 
     @mcp.resource("ideahub://status")
@@ -542,6 +543,27 @@ def build_server() -> FastMCP:
     def recognize(id: str | None = None) -> dict:  # noqa: A002
         c = _open_live(store)
         return recognize_actor(c, RecognizeInput(id=id)).model_dump()
+
+    @mcp.tool(
+        description=(
+            "Register an actor without writing an idea. Use before passing a person as "
+            "`originator` (e.g. id='human:michael') when they have never written "
+            "themselves. `id` must start with 'human:' or 'agent:'. Idempotent: an "
+            "existing actor is returned unchanged with created=false. `display_name` "
+            "only applies on first registration."
+        ),
+        annotations={
+            "readOnlyHint": False,
+            "destructiveHint": False,
+            "idempotentHint": True,
+            "openWorldHint": False,
+        },
+    )
+    def register(id: str, display_name: str | None = None) -> dict:  # noqa: A002
+        c = _open_live(store)
+        return register_actor(
+            c, RegisterInput(id=id, display_name=display_name)
+        ).model_dump()
 
     # Silence unused-import lint on imports that exist only for type surfaces.
     _ = IdeaHubError

@@ -11,7 +11,7 @@ def test_build_server_registers_tools(tmp_home: Path) -> None:
     names = {t.name for t in tools}
     assert names == {
         "capture", "dump", "search", "list", "get",
-        "related", "annotate", "archive", "link", "recognize", "ping",
+        "related", "annotate", "archive", "link", "recognize", "register", "ping",
         "checkpoint", "promote",
     }
 
