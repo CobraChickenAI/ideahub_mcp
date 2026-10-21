@@ -20,6 +20,7 @@ The primary user is a model. Tools are short, imperative, example-laden; errors 
 | `archive`    | Hide an idea; write a typed `archive` note with reason.                                 |
 | `link`       | Connect two ideas (`related`, `supersedes`, `evolved_from`, `duplicate`).               |
 | `recognize`  | Inspect the actor table.                                                                |
+| `register`   | Add an actor (e.g. `human:you`) so it can be an `originator`. Idempotent.               |
 | `ping`       | Cheap no-side-effect health probe for connection/debugging.                             |
 
 ## Writeback Loop
@@ -96,10 +97,10 @@ Add to `~/.claude/settings.json`:
 | Var                | Default            | Purpose                                          |
 | ------------------ | ------------------ | ------------------------------------------------ |
 | `IDEAHUB_MCP_HOME` | `~/.ideahub_mcp/`  | Data directory (SQLite store, logs, backups).    |
-| `IDEAHUB_ACTOR`    | —                  | Fallback actor id (`human:you` or `agent:name`). |
+| `IDEAHUB_ACTOR`    | —                  | Default actor id (`human:you` or `agent:name`).  |
 | `IDEAHUB_SCOPE`    | —                  | Fallback scope when cwd isn't a git repo.        |
 
-Actor resolution: explicit arg → MCP `clientInfo.name` → `IDEAHUB_ACTOR` → error.
+Actor resolution: explicit arg → `IDEAHUB_ACTOR` → MCP `clientInfo.name` → error.
 Scope resolution: explicit arg → `IDEAHUB_SCOPE` → `repo:<git-toplevel>` → `global`.
 
 ## Storage
