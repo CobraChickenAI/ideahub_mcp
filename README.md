@@ -66,6 +66,11 @@ That design supports hosts that favor different MCP surfaces. Some clients reaso
 
 For the full compatibility rubric, see [docs/mcp-health.md](docs/mcp-health.md).
 
+## Direction
+
+- [Direction: IdeaHub as the foundation for Grok Native](docs/direction-grok-native.md): one shared source of truth that many agents read and one writer appends to.
+- [Sidecars](docs/sidecars.md): the transcript ingester, health check, and activity-log pipeline that run next to this package, outside it.
+
 ## Install
 
 ```bash
