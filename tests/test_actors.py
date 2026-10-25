@@ -16,7 +16,21 @@ def test_explicit_actor_arg_wins(
     assert result.created is True
 
 
-def test_client_info_name_used_if_no_explicit(conn: sqlite3.Connection) -> None:
+def test_env_var_beats_client_info_name(
+    conn: sqlite3.Connection, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("IDEAHUB_ACTOR", "human:michael")
+    result = resolve_actor(conn, explicit=None, client_info_name="claude-code")
+    assert result.id == "human:michael"
+    assert result.kind == "human"
+    ids = {r[0] for r in conn.execute("SELECT id FROM actor")}
+    assert ids == {"human:michael"}
+
+
+def test_client_info_name_used_if_no_explicit_or_env(
+    conn: sqlite3.Connection, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("IDEAHUB_ACTOR", raising=False)
     result = resolve_actor(conn, explicit=None, client_info_name="claude-code")
     assert result.id == "agent:claude-code"
 
