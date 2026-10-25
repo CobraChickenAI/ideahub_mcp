@@ -18,7 +18,7 @@ The primary user is a model. Tools are short, imperative, example-laden; errors 
 | `related`    | Nearest neighbors by tag overlap → shared originator → recency.                         |
 | `annotate`   | Append a free-text note to an idea without mutating it.                                 |
 | `archive`    | Hide an idea; write a typed `archive` note with reason.                                 |
-| `link`       | Connect two ideas (`related`, `supersedes`, `evolved_from`, `duplicate`).               |
+| `link`       | Connect two ideas (`related`, `supersedes`, `evolved_from`, `duplicate`, `part_of`, `answers`). `part_of` goes from the part to the whole; `answers` from the answer to the question. |
 | `recognize`  | Inspect the actor table.                                                                |
 | `register`   | Add an actor (e.g. `human:you`) so it can be an `originator`. Idempotent.               |
 | `ping`       | Cheap no-side-effect health probe for connection/debugging.                             |
