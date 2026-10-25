@@ -22,7 +22,8 @@ does:
 - **Append-only store.** Ideas are not edited in place. Changes arrive as notes
   (`annotate`), archive records with a reason (`archive`), or new ideas linked to
   old ones.
-- **Typed links.** `related`, `duplicate`, `evolved_from`, `supersedes`. A changed
+- **Typed links.** `related`, `duplicate`, `evolved_from`, `supersedes`, `part_of`
+  (from the part to the whole), `answers` (from the answer to the question). A changed
   position is a new idea that `supersedes` the old one, so the dated history stays.
 - **Actors and originators.** Every row records who wrote it (`actor`) and, when it
   differs, whose thought it was (`originator`). A configured `IDEAHUB_ACTOR` wins
