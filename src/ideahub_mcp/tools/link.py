@@ -8,7 +8,9 @@ from ideahub_mcp.errors import IdeaHubError
 from ideahub_mcp.util.clock import utcnow_iso
 from ideahub_mcp.util.coerce import normalize_task_ref
 
-LINK_KINDS = {"related", "supersedes", "evolved_from", "duplicate"}
+# part_of points from the part to the whole; answers points from the answer to
+# the question. The database CHECK on idea_link.kind (migration 005) matches this set.
+LINK_KINDS = {"related", "supersedes", "evolved_from", "duplicate", "part_of", "answers"}
 
 
 class LinkInput(BaseModel):

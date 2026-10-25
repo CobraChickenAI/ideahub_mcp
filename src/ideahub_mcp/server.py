@@ -499,8 +499,10 @@ def build_server() -> FastMCP:
     @mcp.tool(
         description=(
             "Connect two ideas when current work reveals they are structurally related, "
-            "evolved, duplicated, or superseding one another. "
-            "`kind` ∈ {related, supersedes, evolved_from, duplicate}. `related` is "
+            "evolved, duplicated, superseding, part of a whole, or answering a question. "
+            "`kind` ∈ {related, supersedes, evolved_from, duplicate, part_of, answers}. "
+            "`part_of` goes from the part to the whole; `answers` goes from the answer to "
+            "the question. `related` is "
             "canonicalized (smaller id becomes source). Self-links rejected. Optional "
             "`task_ref` groups all writes from the same task and is normalized to "
             "lowercase kebab-case at the boundary."
