@@ -106,6 +106,9 @@ Add to `~/.claude/settings.json`:
 | `IDEAHUB_SCOPE`    | —                  | Fallback scope when cwd isn't a git repo.        |
 
 Actor resolution: explicit arg → `IDEAHUB_ACTOR` → MCP `clientInfo.name` → error.
+
+The actor name is a label set by the caller (the `actor` argument, `IDEAHUB_ACTOR`, or the client's name). It is not a login check or authentication.
+
 Scope resolution: explicit arg → `IDEAHUB_SCOPE` → `repo:<git-toplevel>` → `global`.
 
 ## Storage
