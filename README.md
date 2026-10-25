@@ -20,6 +20,7 @@ The primary user is a model. Tools are short, imperative, example-laden; errors 
 | `archive`    | Hide an idea; write a typed `archive` note with reason.                                 |
 | `link`       | Connect two ideas (`related`, `supersedes`, `evolved_from`, `duplicate`).               |
 | `recognize`  | Inspect the actor table.                                                                |
+| `register`   | Add an actor (e.g. `human:you`) so it can be an `originator`. Idempotent.               |
 | `ping`       | Cheap no-side-effect health probe for connection/debugging.                             |
 
 ## Writeback Loop
@@ -65,6 +66,11 @@ That design supports hosts that favor different MCP surfaces. Some clients reaso
 
 For the full compatibility rubric, see [docs/mcp-health.md](docs/mcp-health.md).
 
+## Direction
+
+- [Direction: IdeaHub as the foundation for Grok Native](docs/direction-grok-native.md): one shared source of truth that many agents read and one writer appends to.
+- [Sidecars](docs/sidecars.md): the transcript ingester, health check, and activity-log pipeline that run next to this package, outside it.
+
 ## Install
 
 ```bash
@@ -96,10 +102,13 @@ Add to `~/.claude/settings.json`:
 | Var                | Default            | Purpose                                          |
 | ------------------ | ------------------ | ------------------------------------------------ |
 | `IDEAHUB_MCP_HOME` | `~/.ideahub_mcp/`  | Data directory (SQLite store, logs, backups).    |
-| `IDEAHUB_ACTOR`    | —                  | Fallback actor id (`human:you` or `agent:name`). |
+| `IDEAHUB_ACTOR`    | —                  | Default actor id (`human:you` or `agent:name`).  |
 | `IDEAHUB_SCOPE`    | —                  | Fallback scope when cwd isn't a git repo.        |
 
-Actor resolution: explicit arg → MCP `clientInfo.name` → `IDEAHUB_ACTOR` → error.
+Actor resolution: explicit arg → `IDEAHUB_ACTOR` → MCP `clientInfo.name` → error.
+
+The actor name is a label set by the caller (the `actor` argument, `IDEAHUB_ACTOR`, or the client's name). It is not a login check or authentication.
+
 Scope resolution: explicit arg → `IDEAHUB_SCOPE` → `repo:<git-toplevel>` → `global`.
 
 ## Storage

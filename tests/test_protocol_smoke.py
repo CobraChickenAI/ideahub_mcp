@@ -24,6 +24,7 @@ EXPECTED_TOOLS = {
     "archive",
     "link",
     "recognize",
+    "register",
     "ping",
     "checkpoint",
     "promote",
